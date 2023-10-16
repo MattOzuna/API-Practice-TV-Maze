@@ -12,9 +12,9 @@ const $searchForm = $("#searchForm");
  *    (if no image URL given by API, put in a default image URL)
  */
 
-async function getShowsByTerm( /* term */) {
+async function getShowsByTerm(term) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
-  let showsData = await axios.get(`https://api.tvmaze.com/search/shows?q=${$(':input').val()}`)
+  let showsData = await axios.get(`https://api.tvmaze.com/search/shows?q=${term}`)
   return showsData.data.reduce((showsAcc, showData)=>{
     showsAcc.push({
       id: showData.show.id,
@@ -49,14 +49,14 @@ async function getShowsByTerm( /* term */) {
 
 /** Given list of shows, create markup for each and to DOM */
 
-function populateShows(shows) {
+async function populateShows(shows) {
   $showsList.empty();
 
   for (let show of shows) {
     const $show = $(
       `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
-         <div class="media">
-           <img
+         <div class="media" data-image="https://tinyurl.com/tv-missing">
+           <img 
               src="${show.image}"
               alt="Image Unavailable"
               class="w-25 me-3">
@@ -70,8 +70,15 @@ function populateShows(shows) {
          </div>
        </div>
       `);
-
     $showsList.append($show);
+
+    $('.Show').on('click', async function(e){
+      const episodes = await getEpisodesOfShow(e.currentTarget.dataset.showId);
+      populateEpisodes(episodes);
+      $episodesArea.show();
+    })
+    // const episodes = await getEpisodesOfShow(show.id)
+    // populateEpisodes(episodes)
   }
 }
 
@@ -86,6 +93,7 @@ async function searchForShowAndDisplay() {
 
   $episodesArea.hide();
   populateShows(shows);
+  
 }
 
 $searchForm.on("submit", async function (evt) {
@@ -94,12 +102,33 @@ $searchForm.on("submit", async function (evt) {
 });
 
 
+
 /** Given a show ID, get from API and return (promise) array of episodes:
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id) { 
+  let episodesList = await axios.get(`https://api.tvmaze.com/shows/${id}/episodes`);
+  return episodesList.data.reduce((episodesAcc, episodeData)=>{
+    episodesAcc.push({
+      id: episodeData.id,
+      name: episodeData.name,
+      season: episodeData.season,
+      number: episodeData.number
+    });
+    return episodesAcc;
+  },[]);
+}
 
 /** Write a clear docstring for this function... */
 
-// function populateEpisodes(episodes) { }
+function populateEpisodes(episodes) { 
+  $('#episodesList').empty();
+
+  for (let episode of episodes){
+    const $episode = $(
+      `<li>${episode.name} (season${episode.season}, number${episode.number})</li>`
+    )
+  $('#episodesList').append($episode)
+  };
+}
